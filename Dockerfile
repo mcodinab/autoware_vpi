@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     ca-certificates \
     ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-geographic-msgs \
     && rm -rf /var/lib/apt/lists/*
 
 # --------- Build MQTT Libraries ---------

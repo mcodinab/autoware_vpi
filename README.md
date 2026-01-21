@@ -43,92 +43,72 @@ The Braking Service module is a specialized addition to the VPI, designed to **i
 [![PIXKIT + V2X Emergency Braking](https://img.youtube.com/vi/zbTc_y0SD8g/0.jpg)](https://www.youtube.com/watch?v=zbTc_y0SD8g)
 
 # Deployment
-1. Create a new directory:
+This VPI is deployed through a Docker container that contains all the necessary dependencies and configurations to run the VPI modules. Follow the steps below to deploy the VPI:
+1. Clone the repository:
 
 ```
-mkdir ~/vpi
+git clone https://github.com/nap-it/autoware_vpi.git
 ```
 
-2. Create a new **docker-compose.yml** file containing the necessary VPI service and the the config.ini volumes.
+2. Go to the cloned directory:
 
 ```
-services:
-  vpi:
-    image: vpi:latest
-    container_name: vpi
-    volumes:
-      - ./config.ini:/pose_converter/config.ini
-      - ./config.ini:/objects_converter/config.ini
-      - ./config.ini:/braking_service/config.ini
-	  - ./start_all.sh:/start_all.sh
-    network_mode: host
-    ipc: host
-    command: ["/bin/bash", "-c" , "/start_all.sh"]
-    tty: true
-```
-Create the ```start_all.sh``` file in the same directory as ```docker-compose.yml``` file with the following content (this is where you can edit the ***ROS_DOMAIN_ID*** and ***RMW_IMPLEMENTATION*** that connects to Autoware and disable specific internal modules):
-
-```
-#!/bin/bash
-
-# Start all programs in the background
-export ROS_DOMAIN_ID=0
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-source /opt/ros/humble/setup.bash
-
-# -- Pose Converter --
-source /pose-converter/install/setup.bash
-ros2 run pose_converter pose_converter_node & 
-
-# -- Objects Converter --
-source /objects-converter/install/setup.bash
-ros2 run objects_converter objects_converter_node &
-
-# -- Braking Service --
-source /braking-service/include/tier4_external_api_msgs/install/setup.bash
-source /braking-service/install/setup.bash
-ros2 run braking_service braking_service_node &
-
-# Wait for all background processes to complete
-wait
-
-
+cd autoware_vpi
 ```
 
- 4. Each of the VPI's internal modules can be configured by the file ```config.ini```:
- - For the [pose-converter], the configuration is the following:
+3. Run the following command to build the Docker image:
+
+```
+docker build -t autoware_vpi:latest .
+```
+
+4. Start the Docker container with the following command:
+
+```
+docker compose up -d
+```
+
+5. Access the Docker container's logs with:
+
+```
+docker compose logs -f
+```
+
+# How to configure the VPI
+
+- The ```start_all.sh``` script is used to launch all the VPI internal modules in the background when the Docker container starts. By default, all modules are enabled. This is where you can edit the ***ROS_DOMAIN_ID*** and ***RMW_IMPLEMENTATION*** that connects to Autoware.
+
+- The ```config.ini``` file is used to configure each of the VPI's internal modules. By default, all modules are configured to connect to DDS domain ID 0 and MQTT host at ```127.0.0.1```.
+
+- For the [pose-converter]:
 ```
 [pose-converter]
 dds_domain_id=0
 debug=0
-reference_latitude=0.0			; autoware map reference latitude
-reference_longitude=0.0			; autoware map reference longitude
+reference_latitude=0.0			; autoware map origin latitude
+reference_longitude=0.0			; autoware map origin longitude
 mqtt_host=127.0.0.1             ; mqtt host to publish messages
 ```
- - For the [objects-converter], the configuration is the following:
+  - For the [objects-converter]:
 ```
 [objects-converter]
 dds_domain_id=0
 debug=0
-reference_latitude=0.0				; autoware map reference latitude
-reference_longitude=0.0				; autoware map reference longitude
+reference_latitude=0.0				; autoware map origin latitude
+reference_longitude=0.0				; autoware map origin longitude
 ignore_unknown_objects=true		    ; don't publish objects with unknown classification
 mqtt_host=127.0.0.1                 ; mqtt host to publish messages
 ```
 
- - For the [braking-service], the configuration is the following:
+ - For the [braking-service]:
 ```
 [braking-service]
 dds_domain_id=0
-debug=1
-mqtt_host=127.0.0.1                 ; mqtt host to publish messages
+debug=0
+mqtt_host=127.0.0.1                 ; mqtt host to subcribe to messages
 ```
 
- 5. Launch the VPI:
-```
-cd ~/vpi
-docker compose up -d
-```
+
 # How to interact with the VPI
 
  - To gather the vehicle's pose information, subscribe to the DDS/MQTT topic ***aw/out/pose*** which contains the following information: 
@@ -145,6 +125,8 @@ docker compose up -d
 	cov_twist_ang_z: float		// angular velocity covariance
 }
 ```
+
+Note: The latitude and longitude are calculated based on the reference position defined in the configuration file on the parameters ```reference_latitude``` and ```reference_longitude```. This reference position should match the origin of the Autoware map being used.
  - To gather information about the vehicle's detected objects, subscribe to the DDS/MQTT topic ***aw/out/objects*** which contains the following information: 
 ```
 {
@@ -188,6 +170,9 @@ For example, run the following command in the terminal to engage the emergency b
 ```
 mosquitto_pub -t 'aw/in/brake' -m '{"brake":true}'
 ```
+
+## Acknowledgements
+We thank [I2CAT](https://i2cat.net) for their valuable feedback and contributions to the development and documentation of this VPI.
 
 ## License
 
