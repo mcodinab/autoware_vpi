@@ -103,6 +103,17 @@ ignore_unknown_objects=true		    ; don't publish objects with unknown classifica
 mqtt_host=127.0.0.1                 ; mqtt host to publish messages
 ```
 
+- For the [v2x-converter]:
+```
+[v2x-converter]
+dds_domain_id=0
+debug=0
+reference_latitude=0.0
+reference_longitude=0.0
+mqtt_host=127.0.0.1
+mqtt_topic_in=/aw/in/objects
+ros_topic_out=/perception/object_recognition/detection/objects
+```
  - For the [braking-service]:
 ```
 [braking-service]
